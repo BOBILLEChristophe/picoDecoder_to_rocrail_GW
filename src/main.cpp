@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.0.1"
+#define VERSION "0.0.6"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 #include <Arduino.h>
@@ -52,7 +52,10 @@ Module module[NBRE_MODULES];
 //----------------------------------------------------------------------------------------
 //  Select a communication mode
 //----------------------------------------------------------------------------------------
+// Uncomment the following line if you're using a WiFi or Ethernet
+// Comment out if you are using WiFi
 #define ETHERNET
+// Comment out if you are using Ethernet
 // #define WIFI
 
 //----------------------------------------------------------------------------------------
@@ -97,12 +100,10 @@ static const uint32_t DESIRED_BIT_RATE = 250UL * 1000UL; // Marklin CAN baudrate
 //  This gateway hash + Rocrail hash
 //----------------------------------------------------------------------------------------
 const uint16_t hash = 0x1811; // this gateway hash
-uint16_t rrHash;              // for Rocrail hash
 
 //----------------------------------------------------------------------------------------
 //  Queues
 //----------------------------------------------------------------------------------------
-
 QueueHandle_t canToTcpQueue;
 QueueHandle_t tcpToCanQueue;
 QueueHandle_t debugQueue; // Queue for debug messages
@@ -110,7 +111,6 @@ QueueHandle_t debugQueue; // Queue for debug messages
 //----------------------------------------------------------------------------------------
 //  Buffers  : Rocrail always send 13 bytes
 //----------------------------------------------------------------------------------------
-
 static const uint8_t BUFFER_SIZE = 13;
 byte cBuffer[BUFFER_SIZE]; // CAN buffer
 byte sBuffer[BUFFER_SIZE]; // Serial buffer
@@ -118,17 +118,13 @@ byte sBuffer[BUFFER_SIZE]; // Serial buffer
 //----------------------------------------------------------------------------------------
 //  Task
 //----------------------------------------------------------------------------------------
-
 void CANReceiveTask(void *pvParameters);
 void TCPSendTask(void *pvParameters);
-// void TCPReceiveTask(void *pvParameters);
-// void CANSendTask(void *pvParameters);
 #if defined(ETHERNET)
 void ethernetMonitorTask(void *pvParameters);
 #elif defined(WIFI)
 void wifiMonitorTask(void *pvParameters);
 #endif
-// void debugFrameTask(void *pvParameters); // Debug task
 
 //----------------------------------------------------------------------------------------
 //  SETUP
@@ -136,7 +132,6 @@ void wifiMonitorTask(void *pvParameters);
 
 void setup()
 {
-  // Serial communication initialization for debugging
   Serial.begin(115200);
   while (!Serial)
   {
@@ -179,8 +174,8 @@ void setup()
 
   Serial.println("Configure ESP32 CAN");
   ACAN_ESP32_Settings settings(DESIRED_BIT_RATE);
-  // settings.mDriverReceiveBufferSize = 50;
-  settings.mDriverTransmitBufferSize = 50;
+  settings.mDriverReceiveBufferSize = 100;
+  // settings.mDriverTransmitBufferSize = 50;
   settings.mRxPin = GPIO_NUM_21; // Optional, default Tx pin is GPIO_NUM_4
   settings.mTxPin = GPIO_NUM_22; // Optional, default Rx pin is GPIO_NUM_5
   const uint32_t errorCode = ACAN_ESP32::can.begin(settings);
@@ -206,7 +201,6 @@ void setup()
 #elif defined(WIFI)
   xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 4 * 1024, NULL, 1, NULL, 1); // priority 1 on core 1
 #endif
-  // xTaskCreatePinnedToCore(debugFrameTask, "debugFrameTask", 2 * 1024, NULL, 1, NULL, 1); // debug task with priority 1 on core 1
 
 } // end setup
 
@@ -246,11 +240,10 @@ void CANReceiveTask(void *pvParameters)
         }
         module[idModule].value = frameIn.data16[0];
       }
-      // xQueueSend(debugQueue, &frameIn, 10); // send to debug queue
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-}
+} // end loop
 
 //----------------------------------------------------------------------------------------
 //   TCPSendTask
@@ -290,7 +283,6 @@ void TCPSendTask(void *pvParameters)
   }
 }
 
-
 #if defined(ETHERNET)
 
 //----------------------------------------------------------------------------------------
@@ -323,58 +315,13 @@ void wifiMonitorTask(void *parameter)
   {
     if (WiFi.status() != WL_CONNECTED)
     {
-      xSemaphoreTake(tcpMutex, portMAX_DELAY);
+      // xSemaphoreTake(tcpMutex, portMAX_DELAY);
       Serial.println("Connexion au WiFi perdue. Tentative de reconnexion...");
       WiFi.begin(ssid, password);
     }
-    xSemaphoreGive(tcpMutex);
+    // xSemaphoreGive(tcpMutex);
     vTaskDelay(pdMS_TO_TICKS(5000)); // Vérifier toutes les 5 secondes
   }
 }
 
 #endif
-
-// //----------------------------------------------------------------------------------------
-// //   debugFrameTask
-// //----------------------------------------------------------------------------------------
-
-// void debugFrameTask(void *pvParameters)
-// {
-//   CANMessage frame;
-//   while (true)
-//   {
-//     if (xQueueReceive(debugQueue, &frame, portMAX_DELAY))
-//     {
-//       debugFrame(&frame);
-//     }
-//   }
-// }
-
-// //----------------------------------------------------------------------------------------
-// //   debugFrame
-// //----------------------------------------------------------------------------------------
-
-// void debugFrame(const CANMessage *frame)
-// {
-//   uint16_t hash = frame->id & 0xFFFF;
-//   if (hash == rrHash)
-//     Serial.println("TCP -> CAN");
-//   else
-//     Serial.println("CAN -> TCP");
-//   debug.print("Hash : 0x");
-//   debug.println(hash, HEX);
-//   debug.print("Response : ");
-//   debug.println((frame->id & 0x10000) >> 16 ? "true" : "false");
-//   debug.print("Command : 0x");
-//   debug.println((frame->id & 0x1FE0000) >> 17, HEX);
-//   for (byte i = 0; i < frame->len; i++)
-//   {
-//     debug.printf("data[%d] = 0x", i);
-//     debug.print(frame->data[i], HEX);
-//     if (i < frame->len - 1)
-//       debug.print(" - ");
-//   }
-//   debug.printf("\n");
-//   debug.println("-----------------------------------------------------------------------------------------------------------------------------");
-//   debug.printf("\n");
-// }
