@@ -1,20 +1,14 @@
 /*----------------------------------------------------------------------------------------------------------------
 
-Ce programme est une passerelle entre un bus de rétro signalisation S88 et un logiciel de gestion de réseau
+Ce programme est une passerelle entre un bus de rétro signalisation CAN et un logiciel de gestion de réseau
 comme Rocrail, iTrain ou JMRI et quelques autres.
-
-Il permet de scanner les décodeurs S88 (M88 etc...), traite les modifications d'états sur les capteurs et
-renvoi au logiciel les seules modifications constatées pour éviter la surcharge du logiciel.
 
 Le transfert des données peut s'opérer soit en mode TCP, (Ethernet ou WiFi) ou encore sur un bus CAN
 
 ----------------------------------------------------------------------------------------------------------------
 
-This program is a gateway between an S88 feedback bus and a network management software
+This program is a gateway between an CAN feedback bus and a network management software
 like Rocrail, iTrain, or JMRI, among others.
-
-It scans the S88 decoders (M88, etc.), processes the state changes on the sensors, and
-sends only the detected changes back to the software to avoid overloading it.
 
 Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 
