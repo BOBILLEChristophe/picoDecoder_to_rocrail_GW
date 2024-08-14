@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.0.6"
+#define VERSION "0.0.7"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 #include <Arduino.h>
@@ -81,8 +81,8 @@ EthernetClient client;
 //----------------------------------------------------------------------------------------
 #elif defined(WIFI)
 #include <WiFi.h>
-// const char *ssid = "**********";
-// const char *password = "**********";
+const char *ssid = "**********";
+const char *password = "**********";
 IPAddress gateway(192, 168, 1, 1);  // passerelle par défaut
 IPAddress subnet(255, 255, 255, 0); // masque de sous réseau
 WiFiServer server(port);
@@ -253,7 +253,6 @@ void TCPSendTask(void *pvParameters)
 {
   Message message;
   byte sBuffer[BUFFER_SIZE];
-  const uint16_t hash = 0x1810;
   const uint8_t command = 0x22;
   const bool response = true;
   const uint8_t dlc = 8;
