@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.0.7"
+#define VERSION "0.5.0"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 #include <Arduino.h>
