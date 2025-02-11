@@ -56,7 +56,7 @@ Module module[NBRE_MODULES];
 // Comment out if you are using WiFi
 #define ETHERNET
 // Comment out if you are using Ethernet
-// #define WIFI
+//#define WIFI
 
 //----------------------------------------------------------------------------------------
 //  Ethernet et WIFI
@@ -94,7 +94,7 @@ WiFiClient client;
 //  CAN
 //----------------------------------------------------------------------------------------
 #include <ACAN_ESP32.h>                                  // https://github.com/pierremolinaro/acan-esp32.git
-static const uint32_t DESIRED_BIT_RATE = 250UL * 1000UL; // Marklin CAN baudrate = 250Kbit/s
+static const uint32_t DESIRED_BIT_RATE = 1000UL * 1000UL; // CAN baudrate = 1000 Kbit/s
 
 //----------------------------------------------------------------------------------------
 //  This gateway hash + Rocrail hash
