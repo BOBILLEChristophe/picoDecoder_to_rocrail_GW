@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.5.0"
+#define VERSION "0.5.3"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 #include <Arduino.h>
@@ -36,14 +36,14 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 struct Module
 {
   uint16_t ID;
-  uint8_t value;
+  uint16_t value;
 };
 
 struct Message
 {
   uint16_t module;
   uint16_t sensor;
-  uint8_t value;
+  uint16_t value;
 };
 
 const uint8_t NBRE_MODULES = 1;
@@ -56,7 +56,7 @@ Module module[NBRE_MODULES];
 // Comment out if you are using WiFi
 #define ETHERNET
 // Comment out if you are using Ethernet
-//#define WIFI
+// #define WIFI
 
 //----------------------------------------------------------------------------------------
 //  Ethernet et WIFI
@@ -83,6 +83,7 @@ EthernetClient client;
 #include <WiFi.h>
 const char *ssid = "**********";
 const char *password = "**********";
+
 IPAddress gateway(192, 168, 1, 1);  // passerelle par défaut
 IPAddress subnet(255, 255, 255, 0); // masque de sous réseau
 WiFiServer server(port);
@@ -93,7 +94,7 @@ WiFiClient client;
 //----------------------------------------------------------------------------------------
 //  CAN
 //----------------------------------------------------------------------------------------
-#include <ACAN_ESP32.h>                                  // https://github.com/pierremolinaro/acan-esp32.git
+#include <ACAN_ESP32.h>                                   // https://github.com/pierremolinaro/acan-esp32.git
 static const uint32_t DESIRED_BIT_RATE = 1000UL * 1000UL; // CAN baudrate = 1000 Kbit/s
 
 //----------------------------------------------------------------------------------------
@@ -112,8 +113,6 @@ QueueHandle_t debugQueue; // Queue for debug messages
 //  Buffers  : Rocrail always send 13 bytes
 //----------------------------------------------------------------------------------------
 static const uint8_t BUFFER_SIZE = 13;
-byte cBuffer[BUFFER_SIZE]; // CAN buffer
-byte sBuffer[BUFFER_SIZE]; // Serial buffer
 
 //----------------------------------------------------------------------------------------
 //  Task
@@ -188,18 +187,20 @@ void setup()
   else
     Serial.print("Configuration CAN OK\n\n");
 
+  Serial.printf("\n\nWaiting for connection from Rocrail.\n");
+
   // Create queues
   canToTcpQueue = xQueueCreate(50, sizeof(CANMessage));
   tcpToCanQueue = xQueueCreate(50, BUFFER_SIZE * sizeof(byte));
   debugQueue = xQueueCreate(50, sizeof(CANMessage)); // Create debug queue
 
   // Create tasks
-  xTaskCreatePinnedToCore(CANReceiveTask, "CANReceiveTask", 4 * 1024, NULL, 3, NULL, 0); // priority 3 on core 0
-  xTaskCreatePinnedToCore(TCPSendTask, "TCPSendTask", 4 * 1024, NULL, 5, NULL, 1);       // priority 5 on core 1
+  xTaskCreatePinnedToCore(CANReceiveTask, "CANReceiveTask", 4 * 1024, NULL, 3, NULL, 1); // priority 3 on core 0
+  xTaskCreatePinnedToCore(TCPSendTask, "TCPSendTask", 4 * 1024, NULL, 5, NULL, 0);       // priority 5 on core 1
 #if defined(ETHERNET)
   xTaskCreatePinnedToCore(ethernetMonitorTask, "Ethernet Monitor", 4 * 1024, NULL, 1, NULL, 1); // priority 1 on core 1
 #elif defined(WIFI)
-  xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 4 * 1024, NULL, 1, NULL, 1); // priority 1 on core 1
+  xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 4 * 1024, NULL, 1, NULL, 0); // priority 1 on core 1
 #endif
 
 } // end setup
@@ -225,25 +226,23 @@ void CANReceiveTask(void *pvParameters)
   {
     if (ACAN_ESP32::can.receive(frameIn))
     {
-      byte idModule = frameIn.id;
-
-      if (module[idModule].value != frameIn.data16[0])
+      uint16_t idModule = frameIn.id;
+      if (module[idModule].value != (uint16_t)frameIn.data16[0])
       {
+        Serial.printf("Received from node %d value %d\n", idModule, frameIn.data16[0]);
         message.module = idModule;
         for (byte i = 0; i < 16; i++)
         {
-          {
-            message.sensor = i;
-            message.value = ((frameIn.data16[0] & (1 << i)) >> i);
-            xQueueSend(canToTcpQueue, &message, portMAX_DELAY);
-          }
+          message.sensor = i;
+          message.value = ((frameIn.data16[0] & (1 << i)) >> i);
+          xQueueSend(canToTcpQueue, &message, portMAX_DELAY);
         }
         module[idModule].value = frameIn.data16[0];
       }
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(1 / portTICK_PERIOD_MS);
   }
-} // end loop
+} // end CANReceiveTask
 
 //----------------------------------------------------------------------------------------
 //   TCPSendTask
@@ -277,10 +276,13 @@ void TCPSendTask(void *pvParameters)
         sBuffer[11] = 0x00;
         sBuffer[12] = 0x0F;
         client.write(sBuffer, BUFFER_SIZE);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
       }
+      else
+        Serial.println("Connection TCP error");
     }
   }
-}
+} // end TCPSendTask
 
 #if defined(ETHERNET)
 
