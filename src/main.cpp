@@ -25,8 +25,16 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.5.3"
+#define VERSION "0.5.7"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
+
+//----------------------------------------------------------------------------------------
+//  Board Check
+//----------------------------------------------------------------------------------------
+
+#ifndef ARDUINO_ARCH_ESP32
+#error "Select an ESP32 board"
+#endif
 
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
@@ -46,7 +54,7 @@ struct Message
   uint16_t value;
 };
 
-const uint8_t NBRE_MODULES = 1;
+const uint8_t NBRE_MODULES = 2;
 Module module[NBRE_MODULES];
 
 //----------------------------------------------------------------------------------------
@@ -54,9 +62,9 @@ Module module[NBRE_MODULES];
 //----------------------------------------------------------------------------------------
 // Uncomment the following line if you're using a WiFi or Ethernet
 // Comment out if you are using WiFi
-#define ETHERNET
+// #define ETHERNET
 // Comment out if you are using Ethernet
-// #define WIFI
+#define WIFI
 
 //----------------------------------------------------------------------------------------
 //  Ethernet et WIFI
@@ -81,6 +89,7 @@ EthernetClient client;
 //----------------------------------------------------------------------------------------
 #elif defined(WIFI)
 #include <WiFi.h>
+
 const char *ssid = "**********";
 const char *password = "**********";
 
@@ -136,6 +145,14 @@ void setup()
   {
     delay(100);
   }
+
+  Serial.printf("\nProject   :    %s", PROJECT);
+  Serial.printf("\nVersion   :    %s", VERSION);
+  Serial.printf("\nAuteur    :    %s", AUTHOR);
+  Serial.printf("\nFichier   :    %s", __FILE__);
+  Serial.printf("\nCompiled  :    %s", __DATE__);
+  Serial.printf(" - %s\n\n", __TIME__);
+  Serial.printf("-----------------------------------\n\n");
 
 #if !defined(ETHERNET) && !defined(WIFI) && !defined(CAN)
   Serial.print("Select a communication mode.");
@@ -260,6 +277,12 @@ void TCPSendTask(void *pvParameters)
   {
     if (xQueueReceive(canToTcpQueue, &message, portMAX_DELAY))
     {
+
+#if defined(WIFI)
+      if (!client || !client.connected())
+        client = server.available();
+#endif
+
       if (client || client.connected())
       {
         sBuffer[0] = 0x00;
@@ -279,7 +302,7 @@ void TCPSendTask(void *pvParameters)
         vTaskDelay(10 / portTICK_PERIOD_MS);
       }
       else
-        Serial.println("Connection TCP error");
+        Serial.println("Rocrail is not connected !");
     }
   }
 } // end TCPSendTask
@@ -292,14 +315,29 @@ void TCPSendTask(void *pvParameters)
 
 void ethernetMonitorTask(void *parameter)
 {
+  bool print = false;
+  uint64_t curTime = millis();
+  uint64_t tempo = 5000;
+
   while (true)
   {
     if (!client.connected())
     {
-      Serial.println("Connexion au serveur TCP perdue. Tentative de reconnexion...");
+      if (millis() > (tempo + curTime))
+      {
+        Serial.println("Connexion au serveur TCP perdue. Tentative de reconnexion...");
+        curTime = millis();
+      }
       client = server.available();
+      print = false;
     }
-    vTaskDelay(pdMS_TO_TICKS(5000)); // Vérifier toutes les 5 secondes
+    else if (!print)
+    {
+      Serial.println("Connexion Rocrail OK.");
+      print = true;
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100)); // Vérifier toutes les 1/10 secondes
   }
 }
 
@@ -312,16 +350,31 @@ void ethernetMonitorTask(void *parameter)
 // Tâche pour surveiller la connexion WiFi et la reconnecter si nécessaire (Core 1)
 void wifiMonitorTask(void *parameter)
 {
+  bool print = false;
+  uint64_t curTime = millis();
+  uint64_t tempo = 5000;
+
   while (true)
   {
     if (WiFi.status() != WL_CONNECTED)
     {
-      // xSemaphoreTake(tcpMutex, portMAX_DELAY);
-      Serial.println("Connexion au WiFi perdue. Tentative de reconnexion...");
+      if (millis() > (tempo + curTime))
+      {
+        // xSemaphoreTake(tcpMutex, portMAX_DELAY);
+        Serial.println("Connexion au WiFi perdue. Tentative de reconnexion...");
+        curTime = millis();
+      }
       WiFi.begin(ssid, password);
+      print = false;
     }
+    else if (!print)
+    {
+      Serial.println("Connexion Rocrail OK.");
+      print = true;
+    }
+
     // xSemaphoreGive(tcpMutex);
-    vTaskDelay(pdMS_TO_TICKS(5000)); // Vérifier toutes les 5 secondes
+    vTaskDelay(pdMS_TO_TICKS(100)); // Vérifier toutes les 5 secondes
   }
 }
 
