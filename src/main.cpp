@@ -62,9 +62,9 @@ Module module[NBRE_MODULES];
 //----------------------------------------------------------------------------------------
 // Uncomment the following line if you're using a WiFi or Ethernet
 // Comment out if you are using WiFi
-// #define ETHERNET
+#define ETHERNET
 // Comment out if you are using Ethernet
-#define WIFI
+// #define WIFI
 
 //----------------------------------------------------------------------------------------
 //  Ethernet et WIFI
@@ -226,6 +226,8 @@ void setup()
 #elif defined(WIFI)
   xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 4 * 1024, NULL, 1, NULL, 0); // priority 1 on core 1
 #endif
+
+  delay(5000); // Laisse le tzemps à Rocrail de s'initialiser
 
 } // end setup
 
