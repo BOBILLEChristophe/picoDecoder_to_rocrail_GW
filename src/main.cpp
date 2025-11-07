@@ -206,12 +206,11 @@ void setup()
 
   Serial.printf("\n\nWaiting for connection from Rocrail.\n");
 
-  while (!client) // listen for incoming clients
+  while (!client || !client.connected()) // listen for incoming clients
+  {
     client = server.available();
-  // extract the Rocrail hash
-  if (client.connected())
-  { // loop while the client's connected
-    Serial.print("Connection Rocrail OK");
+    if (client.connected())
+      Serial.print("Connection Rocrail OK");
   }
   // Create queues
   canToTcpQueue = xQueueCreate(50, sizeof(CANMessage));
