@@ -226,7 +226,7 @@ void setup()
   xTaskCreatePinnedToCore(wifiMonitorTask, "WiFi Monitor", 4 * 1024, NULL, 1, NULL, 0); // priority 1 on core 1
 #endif
 
-  delay(5000); // Laisse le tzemps à Rocrail de s'initialiser
+  delay(5000); // Laisse le temps à Rocrail de s'initialiser
 
 } // end setup
 
