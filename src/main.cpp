@@ -115,8 +115,8 @@ const uint16_t hash = 0x1811; // this gateway hash
 //  Queues
 //----------------------------------------------------------------------------------------
 QueueHandle_t canToTcpQueue;
-QueueHandle_t tcpToCanQueue;
-QueueHandle_t debugQueue; // Queue for debug messages
+//QueueHandle_t tcpToCanQueue;
+//QueueHandle_t debugQueue; // Queue for debug messages
 
 //----------------------------------------------------------------------------------------
 //  Buffers  : Rocrail always send 13 bytes
@@ -214,8 +214,8 @@ void setup()
   }
   // Create queues
   canToTcpQueue = xQueueCreate(50, sizeof(CANMessage));
-  tcpToCanQueue = xQueueCreate(50, BUFFER_SIZE * sizeof(byte));
-  debugQueue = xQueueCreate(50, sizeof(CANMessage)); // Create debug queue
+  //tcpToCanQueue = xQueueCreate(50, BUFFER_SIZE * sizeof(byte));
+  //debugQueue = xQueueCreate(50, sizeof(CANMessage)); // Create debug queue
 
   // Create tasks
   xTaskCreatePinnedToCore(CANReceiveTask, "CANReceiveTask", 4 * 1024, NULL, 3, NULL, 1); // priority 3 on core 0
