@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.5.8"
+#define VERSION "0.5.9"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 //----------------------------------------------------------------------------------------
@@ -206,7 +206,7 @@ void setup()
 
   Serial.printf("\n\nWaiting for connection from Rocrail.\n");
 
-  while (!client || !client.connected()) // listen for incoming clients
+  while (!client && !client.connected()) // listen for incoming clients
   {
     client = server.available();
     if (client.connected())
@@ -287,11 +287,11 @@ void TCPSendTask(void *pvParameters)
     {
 
 #if defined(WIFI)
-      if (!client || !client.connected())
+      if (!client && !client.connected())
         client = server.available();
 #endif
 
-      if (client || client.connected())
+      if (client && client.connected())
       {
         sBuffer[0] = 0x00;
         sBuffer[1] = command | response;
