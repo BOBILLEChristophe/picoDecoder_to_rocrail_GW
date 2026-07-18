@@ -25,7 +25,7 @@ Data transfer can occur either via TCP (Ethernet or WiFi) or over a CAN bus.
 */
 
 #define PROJECT "PicoDecoder gateway for Rocrail"
-#define VERSION "0.5.9"
+#define VERSION "0.6.0"
 #define AUTHOR "Christophe BOBILLE - www.locoduino.org"
 
 //----------------------------------------------------------------------------------------
@@ -252,9 +252,9 @@ void CANReceiveTask(void *pvParameters)
     if (ACAN_ESP32::can.receive(frameIn))
     {
       uint16_t idModule = frameIn.id;
-      if (module[idModule].value != (uint16_t)frameIn.data16[0])
-      {
-        Serial.printf("Received from node %d value %d\n", idModule, frameIn.data16[0]);
+      // if (module[idModule].value != (uint16_t)frameIn.data16[0])
+      // {
+        Serial.printf("Received from node %d value Ox%X\n", idModule, frameIn.data16[0]);
         message.module = idModule;
         for (byte i = 0; i < 16; i++)
         {
@@ -263,7 +263,7 @@ void CANReceiveTask(void *pvParameters)
           xQueueSend(canToTcpQueue, &message, portMAX_DELAY);
         }
         module[idModule].value = frameIn.data16[0];
-      }
+      // }
     }
     vTaskDelay(1 / portTICK_PERIOD_MS);
   }
@@ -341,7 +341,7 @@ void ethernetMonitorTask(void *parameter)
     }
     else if (!print)
     {
-      Serial.println("Connexion Rocrail OK.");
+      Serial.println("Connexion Rocrail OK.\n");
       print = true;
     }
 
